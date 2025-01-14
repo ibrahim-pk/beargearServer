@@ -20,7 +20,7 @@ const verifyToken = (token) => {
       const decoded = jwt.verify(token, process.env.secret_key);
       return decoded;
     } catch (err) {
-      return { msg: 'Invalid User' };
+      return { msg:'0'};
     }
   };
   

@@ -80,9 +80,9 @@ authRouter.post('/login', (req, res) => {
         // If the passwords match, return a success message
         if (result) {
           const token=createToken(user)
-         // console.log(token)
-          res.status(200).json({ msg: 'Login successful',token:token });
-         // console.log(results)
+          const isAdmin=verifyToken(token)?.data?.isAdmin  //isAdmin default 0
+          res.status(200).json({ msg: 'Login successful',token:token,admin:isAdmin });
+         
         } else {
           // If the passwords don't match, return an error message
           res.status(200).json({ error: 'Invalid email or password' });
@@ -92,44 +92,50 @@ authRouter.post('/login', (req, res) => {
   });
 
   authRouter.put('/update/:userId', (req, res) => {
-    const userId = req.params.userId;
-    const { name, email, password,token } = req.body;
-   
+     try{
+      const userId = req.params.userId;
+      const { name, email, phone } = req.body;
+      
+     
+      // Check if the user with the provided userId exists in the database
+      const checkUserQuery = 'SELECT * FROM user WHERE id = ?';
+      myDB.query(checkUserQuery, [userId], (err, results) => {
+        if (err) {
+         // console.error('Error checking user:', err);
+          res.status(200).json({ error: 'Internal Server Error' });
+          return;
+        }
+    
+        // If the user does not exist, return an error message
+        if (results.length === 0) {
+          res.status(200).json({ error: 'User not found' });
+          return;
+        }
+    
+        // Update user information
+        else{
+          // const verifyUser=verifyToken(token)
+          //  console.log(verifyUser);
   
-    // Check if the user with the provided userId exists in the database
-    const checkUserQuery = 'SELECT * FROM user WHERE id = ?';
-    myDB.query(checkUserQuery, [userId], (err, results) => {
-      if (err) {
-        console.error('Error checking user:', err);
-        res.status(500).json({ error: 'Internal Server Error' });
-        return;
-      }
-  
-      // If the user does not exist, return an error message
-      if (results.length === 0) {
-        res.status(404).json({ error: 'User not found' });
-        return;
-      }
-  
-      // Update user information
-      else{
-        const verifyUser=verifyToken(token)
-         console.log(verifyUser);
+          const updateUserQuery = 'UPDATE user SET name=?, email=?, phone=? WHERE id=?';
+         myDB.query(updateUserQuery, [name, email, phone, userId], (err, result) => {
+          if (err) {
+            console.error('Error updating user:', err);
+            res.status(200).json({ error: 'Something wrongr' });
+            return;
+          }
+          else{
+            res.status(200).json({ message: 'User information updated successfully' });
+          }
+         
+        });
+        }
+      });
 
-      //   const updateUserQuery = 'UPDATE user SET name=?, email=?, password=? WHERE id=?';
-      //  myDB.query(updateUserQuery, [name, email, password, userId], (err, result) => {
-      //   if (err) {
-      //     console.error('Error updating user:', err);
-      //     res.status(500).json({ error: 'Internal Server Error' });
-      //     return;
-      //   }
-      //   else{
-      //     res.status(200).json({ message: 'User information updated successfully' });
-      //   }
-       
-      // });
-      }
-    });
+     }catch(err){
+      res.status(200).json({ error: 'Something wrong' });
+
+     }
   });
   
 
@@ -140,30 +146,55 @@ authRouter.post('/login', (req, res) => {
   
     // Check if the user with the provided userId exists in the database
     const checkUserQuery = 'SELECT * FROM user WHERE id = ?';
-    myDB.query(checkUserQuery, [userId], (err, results) => {
-      if (err) {
-        console.error('Error checking user:', err);
-        res.status(500).json({ error: 'Internal Server Error' });
-        return;
-      }
-  
-      // If the user does not exist, return an error message
-      if (results.length === 0) {
-        res.status(404).json({ error: 'User not found' });
-        return;
-      }
-  
-      // Delete user from the database
-      const deleteUserQuery = 'DELETE FROM user WHERE id=?';
-      myDB.query(deleteUserQuery, [userId], (err, result) => {
+     try{
+      myDB.query(checkUserQuery, [userId], (err, results) => {
         if (err) {
-          console.error('Error deleting user:', err);
-          res.status(500).json({ error: 'Internal Server Error' });
-          return;
+          //console.error('Error checking user:', err);
+          res.status(200).json({ error: 'Internal Server Error' });
+          
         }
-        res.status(200).json({ message: 'User deleted successfully' });
+    
+        // If the user does not exist, return an error message
+        if (results.length === 0) {
+          res.status(200).json({ error: 'User not found' });
+          
+        }
+    
+        // Delete user from the database
+        const deleteUserQuery = 'DELETE FROM user WHERE id=?';
+        myDB.query(deleteUserQuery, [userId], (err, result) => {
+          if (err) {
+            console.error('Error deleting user:', err);
+            res.status(200).json({ error: 'Internal Server Error' });
+            
+          }
+          res.status(200).json({ message: 'User deleted successfully' });
+        });
       });
-    });
+     }catch(err){
+      res.status(200).json({ error: err.message});
+     }
+  });
+
+
+
+
+
+  authRouter.post('/verify', (req, res) => {
+     try{
+      const { token } = req.body;
+      const verifyUser=verifyToken(token)
+      //console.log("Admin:",verifyUser?.data?.isAdmin);
+      if(verifyUser?.data?.isAdmin===1){
+        res.status(200).json({ admin:true,info:verifyUser?.data});
+      }else{
+        res.status(200).json({ admin:false});
+      }
+      
+     }catch(err){
+      console.log(err)
+     }
+   
   });
  
     

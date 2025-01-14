@@ -4,30 +4,35 @@ const myDB = require('../../DB/db');
 const categoryRouter=express.Router()
 
 categoryRouter.post('/add', (req, res) => {
-   //console.log(req.body);
-    const category = req.body.categoryName;
-    const sql = 'INSERT INTO category (category) VALUES (?)'; // Specify the column name you want to insert into
-  
-    myDB.query(sql, [category], (err, results) => {
-      if (err) {
+  const category = req.body.categoryName;
+  const imageLink = req.body.imageLink;
+  const sql = 'INSERT INTO category (category, imageLink) VALUES (?, ?)';
+
+  myDB.query(sql, [category, imageLink], (err, results) => {
+     if (err) {
         console.error('Error creating category:', err);
         res.status(500).json({ error: 'Error creating category' });
-      } else {
+     } else {
         res.status(201).json({ msg:'Added Category' });
-      }
-    });
+     }
   });
+});
+
   
   // Get all order categories
   categoryRouter.get('/get', (req, res) => {
-    myDB.query('SELECT * FROM category', (err, results) => {
-      if (err) {
-        console.error('Error getting categories:', err);
-        res.status(500).json({ error: 'Error getting categories' });
-      } else {
-        res.status(200).json(results);
-      }
-    });
+    try{
+      myDB.query('SELECT * FROM category', (err, results) => {
+        if (err) {
+          console.error('Error getting categories:', err);
+          res.status(500).json({ error: 'Error getting categories' });
+        } else {
+          res.status(200).json(results);
+        }
+      });
+    }catch(error){
+      res.status(500).json({ error: 'Error getting categories' });
+    }
   });
   
   // Update an order category by ID
@@ -47,7 +52,7 @@ categoryRouter.post('/add', (req, res) => {
   // Delete an order category by ID
   categoryRouter.delete('/:id', (req, res) => {
     const id = req.params.id;
-    console.log(id);
+    //console.log(id);
     myDB.query('DELETE FROM category WHERE id = ?', [id], (err) => {
       if (err) {
         console.error('Error deleting category:', err);

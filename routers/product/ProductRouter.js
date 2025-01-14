@@ -10,7 +10,8 @@ const productRouter=express.Router()
 productRouter.get('/getProducts', (req, res) => {
   // Pagination parameters
   const page = parseInt(req.query.page, 10) || 1;
-  const perPage = parseInt(req.query.perPage, 10) || 2;
+  const perPage = parseInt(req.query.perPage,8) || 500;
+ 
 
   // Search parameters
   const searchBrand = req.query.brand;
@@ -19,10 +20,11 @@ productRouter.get('/getProducts', (req, res) => {
   const minPrice = parseFloat(req.query.minPrice);
   const maxPrice = parseFloat(req.query.maxPrice);
 
-  console.log(req.query);
+ // console.log(req.query);
 
   // Build SQL query based on search parameters
-  let sql = 'SELECT * FROM product WHERE 1 = 1'; // Start with a 1=1 condition
+
+  let sql = `SELECT * FROM product  WHERE 1 = 1` ; // Start with a 1=1 condition
 
   const values = [];
 
@@ -58,6 +60,82 @@ productRouter.get('/getProducts', (req, res) => {
     sql += ' ORDER BY newPrice DESC';
   }
 
+  sql += ' ORDER BY id DESC';
+
+  // Apply pagination with placeholders
+  sql += ' LIMIT ? OFFSET ?';
+  values.push(perPage, (page-1) * perPage);
+
+  // Execute the query
+  myDB.query(sql, values, (err, results) => {
+    if (err) {
+      console.error('Error getting products: ' + err.message);
+      res.status(200).send({ error: 'Error getting products' });
+    } else {
+      if (results.length === 0) {
+        res.status(200).send({ error: 'No products found' });
+      } else {
+        res.status(200).json(results);
+      }
+    }
+  });
+}); 
+
+
+
+productRouter.get('/category/getProducts', (req, res) => {
+  // Pagination parameters
+  const page = parseInt(req.query.page, 10) || 1;
+  const perPage = parseInt(req.query.perPage, 10) || 2;
+
+  // Search parameters
+  const searchBrand = req.query.brand;
+  const searchColor = req.query.color;
+  const cateId = req.query.cateId;
+  const searchPriceAsc = req.query.sortAsc;
+  const minPrice = parseFloat(req.query.minPrice);
+  const maxPrice = parseFloat(req.query.maxPrice);
+
+ // console.log(req.query);
+
+  // Build SQL query based on search parameters
+  let sql = `SELECT * FROM product WHERE cateId =${cateId}`; // Start with a 1=1 condition
+
+  const values = [];
+
+ 
+  if (searchBrand || searchColor || (minPrice && maxPrice)) {
+    sql += ' AND (';
+    if (searchBrand) {
+      sql += ' title LIKE ?';
+      values.push(`%${searchBrand}%`);
+    }
+ 
+    if (searchColor) {
+      if (searchBrand) {
+        sql += ' OR title LIKE ?';
+      } else {
+        sql += ' title LIKE ?';
+      }
+      values.push(`%${searchColor}%`);
+    }
+    if (minPrice && maxPrice) {
+      if (searchBrand || searchColor) {
+        sql += ' AND';
+      }
+      sql += ' newPrice >= ? AND newPrice <= ?';
+      values.push(minPrice, maxPrice);
+    }
+    sql += ')';
+  }
+
+  // Apply sorting
+  if (searchPriceAsc === '0') {
+    sql += ' ORDER BY newPrice ASC';
+  } else if (searchPriceAsc === '1') {
+    sql += ' ORDER BY newPrice DESC';
+  }
+
   // Apply pagination with placeholders
   sql += ' LIMIT ? OFFSET ?';
   values.push(perPage, (page - 1) * perPage);
@@ -66,16 +144,109 @@ productRouter.get('/getProducts', (req, res) => {
   myDB.query(sql, values, (err, results) => {
     if (err) {
       console.error('Error getting products: ' + err.message);
-      res.status(500).send({ error: 'Error getting products' });
+      res.status(200).send({ error: 'Error getting products' });
     } else {
       if (results.length === 0) {
-        res.status(404).send({ error: 'No products found' });
+        res.status(200).send({ error: 'No products found' });
       } else {
         res.status(200).json(results);
       }
     }
   });
 });
+
+
+
+productRouter.get('/search/getProducts', (req, res) => {
+  // Pagination parameters
+  const page = parseInt(req.query.page, 10) || 1;
+  const perPage = parseInt(req.query.perPage, 10) || 2;
+
+  // Search parameters
+  const searchBrand = req.query.brand;
+  const searchColor = req.query.color;
+  const searchTerm = req.query.name;
+  const searchPriceAsc = req.query.sortAsc;
+  const minPrice = parseFloat(req.query.minPrice);
+  const maxPrice = parseFloat(req.query.maxPrice);
+
+  console.log(req.query);
+
+  // Build SQL query based on search parameters
+  let sql = `SELECT * FROM product WHERE 1=1`;
+
+  const values = [];
+
+  if (searchTerm) {
+    const searchWords = searchTerm.split(' ');
+
+    // Use ILIKE for case-insensitive matching and % for partial matching in both columns
+    sql += ' AND (';
+    for (let i = 0; i < searchWords.length; i++) {
+      if (i > 0) {
+        sql += ' AND'; // Combine words using AND
+      }
+      sql += `(title LIKE ? OR productDetails LIKE ?)`;
+      values.push(`%${searchWords[i]}%`, `%${searchWords[i]}%`);
+    }
+    sql += ')';
+  }
+
+  if (searchBrand || searchColor || (minPrice && maxPrice)) {
+    sql += ' AND (';
+    if (searchBrand) {
+      sql += ' title LIKE ?';
+      values.push(`%${searchBrand}%`);
+    }
+
+    if (searchColor) {
+      if (searchBrand) {
+        sql += ' OR title LIKE ?';
+      } else {
+        sql += ' title LIKE ?';
+      }
+      values.push(`%${searchColor}%`);
+    }
+    if (minPrice && maxPrice) {
+      if (searchBrand || searchColor) {
+        sql += ' AND';
+      }
+      sql += ' newPrice >= ? AND newPrice <= ?';
+      values.push(minPrice, maxPrice);
+    }
+    sql += ')';
+  }
+
+  // Apply sorting
+  if (searchPriceAsc === '0') {
+    sql += ' ORDER BY newPrice ASC';
+  } else if (searchPriceAsc === '1') {
+    sql += ' ORDER BY newPrice DESC';
+  }
+
+  // Apply pagination with placeholders
+  sql += ' LIMIT ? OFFSET ?';
+  values.push(perPage, (page - 1) * perPage);
+
+  // Execute the query
+  myDB.query(sql, values, (err, results) => {
+    if (err) {
+      console.error('Error getting products: ' + err.message);
+      res.status(200).send({ error: 'Error getting products' });
+    } else {
+      if (results.length === 0) {
+        res.status(200).send({ error: 'No products found' });
+      } else {
+        res.status(200).json(results);
+      }
+    }
+  });
+});
+
+
+
+
+
 
 
 
@@ -90,10 +261,10 @@ productRouter.post('/addProduct', (req, res) => {
     const token = authHeader.slice(7);
     const adminInfo=verifyToken(token)
     if(adminInfo.data.isAdmin===1){
-      const { name, oldPrice,newPrice,category,imageLink, stock} = req.body.values;
+      const { name, oldPrice,newPrice,cateId,imageLink, stock} = req.body.values;
     const productDetails = req.body.productDetails;
-    const sql = 'INSERT INTO product (title, oldPrice,newPrice,category,image, stock,productDetails) VALUES (?, ?, ?, ?, ?, ?, ?)';
-    const values = [name, oldPrice,newPrice,category,imageLink, stock , JSON.stringify(productDetails)];
+    const sql = 'INSERT INTO product (title, oldPrice,newPrice,cateId,image, stock,productDetails) VALUES (?, ?, ?, ?, ?, ?, ?)';
+    const values = [name, oldPrice,newPrice,cateId,imageLink, stock , JSON.stringify(productDetails)];
   
     myDB.query(sql, values, (err, result) => {
       if (err) {
@@ -115,27 +286,32 @@ productRouter.post('/addProduct', (req, res) => {
   
   //home product
   productRouter.get('/home/product', (req, res) => {
-    //console.log('home product');
-  // Build SQL query based on search parameters
-    let sql = 'SELECT * FROM product LIMIT 10';
-    // Execute the query
+    // Build SQL query based on search parameters
+    let sql = 'SELECT * FROM product ORDER BY id DESC LIMIT 8';
+  
+     try{
     myDB.query(sql, (err, results) => {
       if (err) {
         //console.error('Error getting products: ' + err.message);
-        res.status(200).send({error:'Error getting products'});
+        res.status(200).send({ error: 'Error getting products' });
       } else {
         if (results.length === 0) {
-          res.status(200).send({error:'No products found'});
+          res.status(200).send({ error: 'No products found' });
         } else {
           res.status(200).json(results);
         }
       }
     });
+
+     }catch(err){
+      res.status(200).send({ error: 'Something Wrong' });
+     }
   });
+  
 
   //top rated
   productRouter.get('/home/top-rated', (req, res) => {
-    console.log('best product');
+   // console.log('best product');
     // Build SQL query based on search parameters
     let sql = 'SELECT * FROM product WHERE rating > 3 LIMIT 10';
     // Execute the query
@@ -215,12 +391,17 @@ productRouter.post('/add/review/:id', (req, res) => {
       userEmail: userInfo.data.email,
     }
 
-    console.log('Product ID:', productId);
-    console.log('Customer Review:', cusReview);
+    // console.log('Product ID:', productId);
+    // console.log('Customer Review:', cusReview);
 
     // Define the SQL query to add a review to the product
-    const sql = 'UPDATE product SET review = JSON_INSERT(review, "$.reviews[0]", ?) WHERE id = ?';
-    const values = [JSON.stringify(cusReview), productId];
+    const sql = `
+        UPDATE product
+        SET review = JSON_ARRAY_APPEND(COALESCE(review, '[]'), '$', ?)
+        WHERE id = ?;
+      `;
+   // const sql = 'UPDATE product SET review = JSON_INSERT(review, "$.reviews[0]", ?) WHERE id = ?';
+    const values = [JSON.stringify(cusReview), productId]
 
     myDB.query(sql, values, (err, result) => {
       if (err) {
@@ -247,7 +428,7 @@ productRouter.post('/add/review/:id', (req, res) => {
   productRouter.get('/getProduct/:id', (req, res) => {
     const productId = req.params.id;
     const sql = 'SELECT * FROM product WHERE id = ?';
-  console.log(productId);
+     console.log(productId);
     myDB.query(sql, [productId], (err, result) => {
       if (err) {
         console.error('Error getting product: ' + err.message);
@@ -301,5 +482,50 @@ productRouter.post('/add/review/:id', (req, res) => {
       }
     });
   });
+
+
+  productRouter.get('/get/review/:productId', async (req, res) => {
+    const productId = req.params.productId;
+   // console.log(productId);
+  
+    try {
+      // Retrieve reviews for the specified product
+      const sql = `
+        SELECT JSON_ARRAY(review) AS reviews
+        FROM product
+        WHERE id = ?;
+      `;
+  
+     // const [results] = await myDB.query(sql, [productId]);
+      myDB.query(sql, [productId], (err, result) => {
+        if (err) {
+          console.error('Error updating product: ' + err.message);
+          res.status(200).send('Error updating product');
+        }
+      if (result.length> 0) {
+        //console.log(result);
+        const product = result[0];
+        const reviews = JSON.parse(product.reviews);
+        const parsedReviews = reviews.length>0?reviews.map(review => JSON.parse(review)):[];
+        const finalReview =parsedReviews.length>0&&parsedReviews[0]?parsedReviews[0].map(review => JSON.parse(review)):[];
+
+        //console.log(finalReview);
+       res.status(200).json({ review:finalReview });
+      } else {
+        res.status(200).json({ error: `No Review` });
+        
+      } 
+    })
+    } catch (error) {
+      console.error('Error retrieving reviews:', error.message);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+  
+  
+
+
+
+
 
   module.exports=productRouter
