@@ -20,7 +20,7 @@ productRouter.get('/getProducts', (req, res) => {
   const minPrice = parseFloat(req.query.minPrice);
   const maxPrice = parseFloat(req.query.maxPrice);
 
- // console.log(req.query);
+   console.log("get:",req.query);
 
   // Build SQL query based on search parameters
 
@@ -28,30 +28,6 @@ productRouter.get('/getProducts', (req, res) => {
 
   const values = [];
 
- 
-  if (searchBrand || searchColor || (minPrice && maxPrice)) {
-    sql += ' AND (';
-    if (searchBrand) {
-      sql += ' title LIKE ?';
-      values.push(`%${searchBrand}%`);
-    }
-    if (searchColor) {
-      if (searchBrand) {
-        sql += ' OR title LIKE ?';
-      } else {
-        sql += ' title LIKE ?';
-      }
-      values.push(`%${searchColor}%`);
-    }
-    if (minPrice && maxPrice) {
-      if (searchBrand || searchColor) {
-        sql += ' AND';
-      }
-      sql += ' newPrice >= ? AND newPrice <= ?';
-      values.push(minPrice, maxPrice);
-    }
-    sql += ')';
-  }
 
   // Apply sorting
   if (searchPriceAsc === '0') {
@@ -60,9 +36,7 @@ productRouter.get('/getProducts', (req, res) => {
     sql += ' ORDER BY newPrice DESC';
   }
 
-  sql += ' ORDER BY id DESC';
 
-  // Apply pagination with placeholders
   sql += ' LIMIT ? OFFSET ?';
   values.push(perPage, (page-1) * perPage);
 
@@ -80,6 +54,8 @@ productRouter.get('/getProducts', (req, res) => {
     }
   });
 }); 
+
+
 
 
 
@@ -392,7 +368,7 @@ productRouter.post('/add/review/:id', (req, res) => {
     }
 
     // console.log('Product ID:', productId);
-    // console.log('Customer Review:', cusReview);
+     console.log('Customer Review:', cusReview);
 
     // Define the SQL query to add a review to the product
     const sql = `

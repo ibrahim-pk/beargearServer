@@ -81,7 +81,7 @@ app.use('/api/v1/popup',popupRouter)
 // Success route
 app.post("/api/user/success", async (req, res) => {
   const tran_id = req.body.tran_id;
-
+  console.log("successUrl:",tran_id)
   // Update the order's payment status to true
   const sql = "UPDATE orders SET payment = true WHERE tran_id = ?";
   myDB.query(sql, [tran_id], (err, result) => {
